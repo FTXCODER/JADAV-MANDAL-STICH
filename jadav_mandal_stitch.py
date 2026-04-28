@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import gspread
-import json
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import pytz
@@ -15,16 +14,15 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
-
+# ✅ Directly use secrets (NO json.loads)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    creds_dict, scope
+    st.secrets["GOOGLE_CREDENTIALS"], scope
 )
 
 client = gspread.authorize(creds)
 
 # ---------------- SHEETS ---------------- #
-SPREADSHEET_NAME = "YOUR FILE NAME"
+SPREADSHEET_NAME = "YOUR FILE NAME"   # 👈 change this
 
 dashboard_sheet = client.open(SPREADSHEET_NAME).worksheet("DOER DASHBOARD")
 update_sheet = client.open(SPREADSHEET_NAME).worksheet("TASK UPDATE")
@@ -79,7 +77,7 @@ if "submitted_local" not in st.session_state:
 # ---------------- UI ---------------- #
 st.title("📋 Jadav Mandal Task Panel")
 
-# Button styling
+# Green button style
 st.markdown("""
 <style>
 .green-btn button {
@@ -92,7 +90,8 @@ st.markdown("""
 # ---------------- DISPLAY ---------------- #
 for index, row in filtered.iterrows():
 
-    task_id = str(row["JOB SERIES"])  # unique identifier
+    # Use unique ID
+    task_id = str(row["JOB SERIES"]) + "_" + str(row["STEPKEY"])
 
     col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
@@ -101,7 +100,9 @@ for index, row in filtered.iterrows():
     col3.write(row["ITEM CODE"])
     col4.write(row["CUT QUANTITY"])
     col5.write(row["STEPKEY"])
-    col6.write(row["FULL UPDATE LINK"])
+
+    # clickable link
+    col6.markdown(f"[Open Link]({row['FULL UPDATE LINK']})")
 
     already_done = (
         task_id in submitted_ids or
