@@ -22,10 +22,16 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(
 client = gspread.authorize(creds)
 
 # ---------------- SHEETS ---------------- #
-SPREADSHEET_NAME = "YOUR FILE NAME"   # 👈 change this
+# SPREADSHEET_NAME = "YOUR FILE NAME"   # 👈 change this
 
-dashboard_sheet = client.open(SPREADSHEET_NAME).worksheet("DOER DASHBOARD")
-update_sheet = client.open(SPREADSHEET_NAME).worksheet("TASK UPDATE")
+# dashboard_sheet = client.open(SPREADSHEET_NAME).worksheet("DOER DASHBOARD")
+# update_sheet = client.open(SPREADSHEET_NAME).worksheet("TASK UPDATE")
+SPREADSHEET_ID = "13W7_scwOIY_H0z1a2JPzKC5IWQWsaFiSeqIE9UURgPQ"
+
+sheet = client.open_by_key(SPREADSHEET_ID)
+
+dashboard_sheet = sheet.worksheet("DOER DASHBOARD")
+update_sheet = sheet.worksheet("TASK UPDATE")
 
 # ---------------- LOAD DATA ---------------- #
 raw_data = dashboard_sheet.get_all_values()
