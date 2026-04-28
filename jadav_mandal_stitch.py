@@ -185,7 +185,7 @@ update_sheet = sheet.worksheet("TASK UPDATE")
 # ---------------- LOAD DATA ---------------- #
 @st.cache_data(ttl=60)
 def load_data():
-    data = jadav_sheet.get("A1:M500")  # limit rows for stability
+    data = jadav_sheet.get("A1:M200")  # limit rows for stability
     df = pd.DataFrame(data[1:], columns=data[0])
     return df
 
