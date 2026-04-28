@@ -34,7 +34,13 @@ dashboard_sheet = sheet.worksheet("DOER DASHBOARD")
 update_sheet = sheet.worksheet("TASK UPDATE")
 
 # ---------------- LOAD DATA ---------------- #
-raw_data = dashboard_sheet.get_all_values()
+# raw_data = dashboard_sheet.get("A1:M")
+try:
+    raw_data = dashboard_sheet.get("A1:M")
+except Exception as e:
+    st.error("REAL ERROR BELOW 👇")
+    st.write(e)
+    st.stop()
 
 # Fix duplicate headers
 headers = raw_data[0]
