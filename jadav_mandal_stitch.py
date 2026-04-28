@@ -6,7 +6,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import pytz
 
-# ---------------- PAGE CONFIG ---------------- #
+# ---------------- PAGE ---------------- #
 st.set_page_config(page_title="Task Panel", layout="wide")
 
 # ---------------- AUTH ---------------- #
@@ -15,7 +15,6 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-# Load credentials from Streamlit Secrets
 creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
 
 creds = ServiceAccountCredentials.from_json_keyfile_dict(
@@ -25,39 +24,62 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(
 client = gspread.authorize(creds)
 
 # ---------------- SHEETS ---------------- #
-SPREADSHEET_NAME = "YOUR FILE NAME"   # 👈 change this
+SPREADSHEET_NAME = "YOUR FILE NAME"
 
 dashboard_sheet = client.open(SPREADSHEET_NAME).worksheet("DOER DASHBOARD")
 update_sheet = client.open(SPREADSHEET_NAME).worksheet("TASK UPDATE")
 
 # ---------------- LOAD DATA ---------------- #
-data = pd.DataFrame(dashboard_sheet.get_all_records())
+raw_data = dashboard_sheet.get_all_values()
 
-# Apply FILTER logic
+# Fix duplicate headers
+headers = raw_data[0]
+unique_headers = []
+seen = {}
+
+for col in headers:
+    if col in seen:
+        seen[col] += 1
+        unique_headers.append(f"{col}_{seen[col]}")
+    else:
+        seen[col] = 0
+        unique_headers.append(col)
+
+data = pd.DataFrame(raw_data[1:], columns=unique_headers)
+
+# ---------------- FILTER ---------------- #
 filtered = data[
-    (data["E"] != "") &
-    (data["C"] == "Jadav Mandal")
+    (data["PLANNED"] != "") &
+    (data["DOER"] == "Jadav Mandal")
 ]
 
-# Select required columns
-filtered = filtered[["A", "H", "I", "J", "K", "L"]]
+# ---------------- SELECT COLUMNS ---------------- #
+filtered = filtered[
+    [
+        "JOB SERIES",
+        "BUYER",
+        "ITEM CODE",
+        "CUT QUANTITY",
+        "STEPKEY",
+        "FULL UPDATE LINK"
+    ]
+]
 
-# ---------------- LOAD SUBMITTED DATA ---------------- #
+# ---------------- LOAD SUBMITTED ---------------- #
 update_data = pd.DataFrame(update_sheet.get_all_records())
 
 submitted_ids = set()
 if not update_data.empty:
-    # Column B contains original Column A values
     submitted_ids = set(update_data.iloc[:, 1].astype(str))
 
-# ---------------- SESSION STATE ---------------- #
+# ---------------- SESSION ---------------- #
 if "submitted_local" not in st.session_state:
     st.session_state.submitted_local = set()
 
 # ---------------- UI ---------------- #
 st.title("📋 Jadav Mandal Task Panel")
 
-# Styling for green button
+# Button styling
 st.markdown("""
 <style>
 .green-btn button {
@@ -67,19 +89,19 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- DISPLAY TABLE ---------------- #
+# ---------------- DISPLAY ---------------- #
 for index, row in filtered.iterrows():
 
-    task_id = str(row["A"])
+    task_id = str(row["JOB SERIES"])  # unique identifier
 
     col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
-    col1.write(row["A"])
-    col2.write(row["H"])
-    col3.write(row["I"])
-    col4.write(row["J"])
-    col5.write(row["K"])
-    col6.write(row["L"])
+    col1.write(row["JOB SERIES"])
+    col2.write(row["BUYER"])
+    col3.write(row["ITEM CODE"])
+    col4.write(row["CUT QUANTITY"])
+    col5.write(row["STEPKEY"])
+    col6.write(row["FULL UPDATE LINK"])
 
     already_done = (
         task_id in submitted_ids or
@@ -93,7 +115,7 @@ for index, row in filtered.iterrows():
             st.button("SUBMITTED", key=f"done_{index}", disabled=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # ---------------- SUBMIT BUTTON ---------------- #
+    # ---------------- SUBMIT ---------------- #
     else:
         if col7.button("SUBMIT", key=f"submit_{index}"):
 
@@ -101,15 +123,14 @@ for index, row in filtered.iterrows():
             timestamp = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
 
             update_sheet.append_row([
-                timestamp,      # Column A
-                row["A"],       # Column B
-                row["L"],       # Column C
-                "YES"           # Column D
+                timestamp,
+                row["JOB SERIES"],
+                row["FULL UPDATE LINK"],
+                "YES"
             ])
 
-            # Update local state (instant UI update)
             st.session_state.submitted_local.add(task_id)
 
-            st.success(f"✅ Submitted for Task {row['A']}")
+            st.success(f"✅ Submitted for {row['JOB SERIES']}")
 
             st.rerun()
